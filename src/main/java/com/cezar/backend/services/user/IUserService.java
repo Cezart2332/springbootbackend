@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface IUserService {
     UserResponse createUser(UserRequest userRequest);
+    UserResponse loginUser(UserRequest userRequest) throws Exception;
     List<UserResponse> getUsers();
 }

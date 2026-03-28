@@ -11,15 +11,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 public class UserController {
-    @Autowired
     private IUserService userService;
-    @PostMapping
+
+    public UserController(IUserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/register")
     public UserResponse createUser(@RequestBody UserRequest request) {
         return userService.createUser(request);
     }
-    @GetMapping
-    public List<UserResponse> getUsers() {
-
-        return userService.getUsers();
+    @PostMapping("/login")
+    public UserResponse login(@RequestBody UserRequest request) throws Exception {
+        return userService.loginUser(request);
     }
 }
