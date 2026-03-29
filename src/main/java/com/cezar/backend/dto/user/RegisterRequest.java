@@ -1,6 +1,6 @@
 package com.cezar.backend.dto.user;
 
-public class UserRequest {
+public class RegisterRequest {
     public String name;
     public String email;
     public String password;
