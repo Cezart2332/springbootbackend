@@ -14,21 +14,22 @@ public class RefreshToken {
     @Column(nullable = false, unique = true)
     private String token;
 
-    @Column(nullable = false)
-    private String email;
+    @ManyToOne(fetch = FetchType.LAZY)  // many tokens → one user
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false)
     private Instant expiresAt;
 
     public RefreshToken() {}
 
-    public RefreshToken(String token, String email, Instant expiresAt) {
+    public RefreshToken(String token, User user, Instant expiresAt) {
         this.token = token;
-        this.email = email;
+        this.user = user;
         this.expiresAt = expiresAt;
     }
 
     public String getToken() { return token; }
-    public String getEmail() { return email; }
+    public User getUser() { return user ; }
     public Instant getExpiresAt() { return expiresAt; }
 }

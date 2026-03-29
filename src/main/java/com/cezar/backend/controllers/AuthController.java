@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
-    private IAuthService authService;
+    private final IAuthService authService;
 
     public AuthController(IAuthService authService) {
         this.authService = authService;
@@ -21,6 +21,15 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
             AuthResponse response = authService.createUser(request);
+            return ResponseEntity.status(201).body(response); // 201 Created
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage()); // 400 Bad Request
+        }
+    }
+    @PostMapping("/admin")
+    public ResponseEntity<?> registerAdmin(@RequestBody RegisterRequest request) {
+        try {
+            AuthResponse response = authService.createUserAdmin(request);
             return ResponseEntity.status(201).body(response); // 201 Created
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage()); // 400 Bad Request

@@ -5,6 +5,7 @@ import com.cezar.backend.dto.user.LoginRequest;
 import com.cezar.backend.dto.user.RefreshRequest;
 import com.cezar.backend.dto.user.RegisterRequest;
 import com.cezar.backend.entities.RefreshToken;
+import com.cezar.backend.entities.Role;
 import com.cezar.backend.entities.User;
 import com.cezar.backend.repositories.RefreshTokenRepository;
 import com.cezar.backend.repositories.UserRepository;
@@ -21,10 +22,10 @@ import java.util.UUID;
 
 @Service
 public class AuthService implements IAuthService {
-    private UserRepository userRepository;
-    private RefreshTokenRepository refreshTokenRepository;
-    private JwtUtil jwtUtil;
-    private BCryptPasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtUtil jwtUtil;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Value("${jwt.refresh-expiration}")
     private long refreshExpiration;
@@ -41,10 +42,19 @@ public class AuthService implements IAuthService {
     public AuthResponse createUser(RegisterRequest userRequest) throws Exception{
         if(userRepository.existsByEmail(userRequest.getEmail())) throw new Exception("Email already exists");
         String encodedPassword = passwordEncoder.encode(userRequest.getPassword());
-        System.out.println(encodedPassword);
-        User user = new User(userRequest.getName(), userRequest.getEmail(), encodedPassword);
+        User user = new User(userRequest.getName(), userRequest.getEmail(), encodedPassword, Role.USER);
         userRepository.save(user);
-        return generateTokenPair(user.getEmail());
+        return generateTokenPair(user.getEmail(),user.getRole());
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse createUserAdmin(RegisterRequest userRequest) throws Exception{
+        if(userRepository.existsByEmail(userRequest.getEmail())) throw new Exception("Email already exists");
+        String encodedPassword = passwordEncoder.encode(userRequest.getPassword());
+        User user = new User(userRequest.getName(), userRequest.getEmail(), encodedPassword, Role.ADMIN);
+        userRepository.save(user);
+        return generateTokenPair(user.getEmail(),user.getRole());
     }
 
     @Override
@@ -54,7 +64,7 @@ public class AuthService implements IAuthService {
         if(userInfo.isEmpty()) throw new Exception("User not found");
         User user = userInfo.get();
         if(passwordEncoder.matches(userRequest.getPassword(), user.getPassword())){
-            return generateTokenPair(user.getEmail());
+            return generateTokenPair(user.getEmail(),user.getRole());
         }
         else{
             throw new Exception("Invalid password");
@@ -63,7 +73,7 @@ public class AuthService implements IAuthService {
     }
 
     @Transactional
-    public AuthResponse refreshToken(RefreshRequest refreshRequest) throws Exception {
+    public AuthResponse refreshToken(RefreshRequest refreshRequest) {
         RefreshToken stored = refreshTokenRepository.findByToken(refreshRequest.getRefreshToken())
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
@@ -71,23 +81,25 @@ public class AuthService implements IAuthService {
             refreshTokenRepository.delete(stored);
             throw new RuntimeException("Refresh token expired, please login again");
         }
-
+        User user = stored.getUser();
         // Rotate — delete old token and issue new pair
         refreshTokenRepository.delete(stored);
-        return generateTokenPair(stored.getEmail());
+        return generateTokenPair(user.getEmail(), user.getRole());
     }
 
 
     @Transactional
-    public AuthResponse generateTokenPair(String email) {
-        String accessToken = jwtUtil.generateToken(email);
+    public AuthResponse generateTokenPair(String email,Role role) {
+        String accessToken = jwtUtil.generateToken(email, role);
+        Optional<User> user = userRepository.findByEmail(email);
+        if(user.isEmpty()) throw new RuntimeException("User not found");
 
         // Delete old refresh token (one active token per user)
-        refreshTokenRepository.deleteByEmail(email);
+        refreshTokenRepository.deleteByUser(user.get());
 
         RefreshToken refreshToken = new RefreshToken(
                 UUID.randomUUID().toString(),
-                email,
+                user.get(),
                 Instant.now().plusMillis(refreshExpiration)
         );
         refreshTokenRepository.save(refreshToken);

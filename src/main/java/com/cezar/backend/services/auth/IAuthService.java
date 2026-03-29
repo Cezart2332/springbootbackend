@@ -7,6 +7,7 @@ import com.cezar.backend.dto.user.RegisterRequest;
 
 public interface IAuthService {
     AuthResponse createUser(RegisterRequest userRequest) throws Exception;
+    AuthResponse createUserAdmin(RegisterRequest userRequest) throws Exception;
     AuthResponse loginUser(LoginRequest userRequest) throws Exception;
     AuthResponse refreshToken(RefreshRequest refreshRequest) throws Exception;
 }

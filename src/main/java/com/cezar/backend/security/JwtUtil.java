@@ -1,5 +1,6 @@
 package com.cezar.backend.security;
 
+import com.cezar.backend.entities.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -26,14 +27,16 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String email) {
+    public String generateToken(String email, Role role) {
         return Jwts.builder()
-                .subject(email)                                                    // ← was setSubject()
+                .subject(email)
+                .claim("role",role)// ← was setSubject()
                 .issuedAt(new Date())                                                 // ← was setIssuedAt()
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))  // ← was setExpiration()
                 .signWith(key)                                                        // ← removed SignatureAlgorithm
                 .compact();
     }
+
 
     public String getEmailFromToken(String token) {
         return Jwts.parser()                  // ← was parserBuilder()
@@ -43,7 +46,14 @@ public class JwtUtil {
                 .getPayload()                 // ← was getBody()
                 .getSubject();
     }
-
+    public String getRoleFromToken(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
+    }
     public boolean validateJwtToken(String token) {
         try {
             Jwts.parser()                     // ← was parserBuilder()
